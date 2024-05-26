@@ -1,19 +1,21 @@
 package user
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/JMustang/warehouse/services/auth"
 	"github.com/JMustang/warehouse/types"
 	"github.com/JMustang/warehouse/utils"
 	"github.com/gorilla/mux"
 )
 
 type Handler struct {
-	Store *types.UserStore
+	store types.UserStore
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(store types.UserStore) *Handler {
+	return &Handler{store: store}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
@@ -31,7 +33,31 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, err)
 	}
 	// check if the user already exists
+	_, err := h.store.GetUserByEmail(payload.Email)
+	if err == nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("User with email %s already exists", payload.Email))
+		return
+	}
 
+	hashedPassword, err := auth.HashPassword(payload.Password)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// if doesnt we create the nre user
+	err = h.store.CreateUser(&types.User{
+		FirstName: payload.FirstName,
+		LastName:  payload.LastName,
+		Email:     payload.Email,
+		Password:  hashedPassword,
+	})
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, nil)
 	// create a new user
 	// return JWT
 }
