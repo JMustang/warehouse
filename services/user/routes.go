@@ -29,6 +29,7 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, err)
 	}
 	// check if the user already exists
+
 	// create a new user
 	// return JWT
 }
